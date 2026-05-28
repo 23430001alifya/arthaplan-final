@@ -70,7 +70,7 @@ label, p, div {
 # =========================================================
 
 df = pd.read_csv(
-    'data/clean_arthaplan.csv'
+    'dashboard/clean_arthaplan (1).csv'
 )
 
 # =========================================================
