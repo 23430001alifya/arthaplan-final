@@ -2,9 +2,8 @@ import streamlit as st
 import pandas as pd
 
 df = pd.read_csv(
-    'clean_arthaplan.csv'
+    'dashboard/clean_arthaplan.csv'
 )
-
 st.title(
     'ArthaPlan Dashboard'
 )
