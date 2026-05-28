@@ -23,7 +23,7 @@ st.set_page_config(
 # =========================================================
 
 df = pd.read_csv(
-    'dashboard/clean_arthaplan.csv'
+    'dashboard/clean_arthaplan (1).csv'
 )
 
 # =========================================================
@@ -124,6 +124,32 @@ fig1 = px.pie(
 
 st.plotly_chart(
     fig1,
+    use_container_width=True
+)
+
+# =====================================================
+# EXPENSE CATEGORY CHART
+# =====================================================
+
+st.subheader("🛒 Expense Category")
+
+expense = (
+    df.groupby('expense_category')[
+        'amount_rupiah'
+    ]
+    .sum()
+    .reset_index()
+)
+
+fig5 = px.bar(
+    expense,
+    x='expense_category',
+    y='amount_rupiah',
+    text_auto=True
+)
+
+st.plotly_chart(
+    fig5,
     use_container_width=True
 )
 
