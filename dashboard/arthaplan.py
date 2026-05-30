@@ -21,6 +21,7 @@ def load_data():
      return pd.read_csv("dashboard/main_data (4).csv")
 
 df = load_data()
+st.write(df.columns.tolist())
 
 # ==================================================
 # SIDEBAR
