@@ -73,10 +73,10 @@ Dashboard Monitoring Financial Planning & User Spending
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric(    
+   st.metric(
     "👥 Total User",
     f"{df['id'].nunique():,}"
-    )
+)
 
 with col2:
     st.metric(
