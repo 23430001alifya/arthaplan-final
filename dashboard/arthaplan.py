@@ -18,71 +18,66 @@ st.set_page_config(
 
 @st.cache_data
 def load_data():
-     return pd.read_csv("dashboard/main_data (4).csv")
+    return pd.read_csv("dashboard/main_data(4).csv")
 
 df = load_data()
-st.write(df.columns.tolist())
 
 # ==================================================
 # SIDEBAR
 # ==================================================
 
-st.sidebar.image(
-    "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
-    width=100
-)
-
 st.sidebar.title("💰 ArthaPlan")
-
-st.sidebar.markdown("---")
 
 kategori = st.sidebar.multiselect(
     "Kategori User",
-    options=df["kategori_user"].dropna().unique(),
-    default=df["kategori_user"].dropna().unique()
+    options=df["kategori_user"].unique(),
+    default=df["kategori_user"].unique()
 )
 
-credit = st.sidebar.slider(
+credit_min = st.sidebar.slider(
     "Minimum Credit Score",
     int(df["credit_score"].min()),
     int(df["credit_score"].max()),
     int(df["credit_score"].min())
 )
 
+gender = st.sidebar.multiselect(
+    "Gender",
+    options=df["gender"].unique(),
+    default=df["gender"].unique()
+)
+
 df = df[
     (df["kategori_user"].isin(kategori))
     &
-    (df["credit_score"] >= credit)
+    (df["credit_score"] >= credit_min)
+    &
+    (df["gender"].isin(gender))
 ]
 
 # ==================================================
 # HEADER
 # ==================================================
 
-st.title("💰 ArthaPlan Interactive Dashboard")
-
-st.markdown(
-"""
-Dashboard Monitoring Financial Planning & User Spending
-"""
-)
+st.title("💰 ArthaPlan Dashboard")
+st.markdown("### Financial Planning & User Profiling")
 
 # ==================================================
-# KPI
+# KPI CARDS
 # ==================================================
 
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-   st.metric(
-    "👥 Total User",
-    f"{df['id'].nunique():,}"
-)
+    st.metric(
+        "👥 Total User",
+        f"{df['id'].nunique():,}"
+    )
 
 with col2:
     st.metric(
-        "💸 Total Spending",
-        f"Rp {df['amount_rupiah'].sum():,.0f}"
+        "💵 Avg Income",
+        f"Rp {df['yearly_income_rupiah'].mean():,.0f}"
     )
 
 with col3:
@@ -93,14 +88,14 @@ with col3:
 
 with col4:
     st.metric(
-        "⚠️ Overbudget User",
-        f"{df['overbudget'].sum():,}"
+        "🏦 Avg Debt",
+        f"Rp {df['total_debt_rupiah'].mean():,.0f}"
     )
 
 st.divider()
 
 # ==================================================
-# CHART 1
+# CHARTS BARIS 1
 # ==================================================
 
 col1, col2 = st.columns(2)
@@ -135,7 +130,39 @@ with col2:
     st.pyplot(fig)
 
 # ==================================================
-# CHART 2
+# CHARTS BARIS 2
+# ==================================================
+
+col1, col2 = st.columns(2)
+
+with col1:
+
+    st.subheader("💰 Distribusi Pendapatan")
+
+    fig, ax = plt.subplots()
+
+    ax.hist(
+        df["yearly_income_rupiah"],
+        bins=20
+    )
+
+    st.pyplot(fig)
+
+with col2:
+
+    st.subheader("🏦 Distribusi Hutang")
+
+    fig, ax = plt.subplots()
+
+    ax.hist(
+        df["total_debt_rupiah"],
+        bins=20
+    )
+
+    st.pyplot(fig)
+
+# ==================================================
+# CHARTS BARIS 3
 # ==================================================
 
 col1, col2 = st.columns(2)
@@ -155,53 +182,48 @@ with col1:
 
 with col2:
 
-    st.subheader("💰 Distribusi Pendapatan")
+    st.subheader("👨‍💼 Gender")
 
     fig, ax = plt.subplots()
 
-    ax.hist(
-        df["yearly_income_rupiah"],
-        bins=20
+    df["gender"].value_counts().plot(
+        kind="pie",
+        autopct="%1.1f%%",
+        ax=ax
     )
+
+    ax.set_ylabel("")
 
     st.pyplot(fig)
 
 # ==================================================
-# TOP SPENDING USER
+# TOP USER INCOME
 # ==================================================
 
-st.subheader("🏆 Top 10 Spending User")
+st.subheader("🏆 Top 10 Pendapatan Tertinggi")
 
-top_user = (
-    df.groupby("client_id")["total_spending"]
-    .max()
-    .sort_values(ascending=False)
+top_income = (
+    df.sort_values(
+        "yearly_income_rupiah",
+        ascending=False
+    )
     .head(10)
 )
 
-st.bar_chart(top_user)
-
-# ==================================================
-# OVERBUDGET
-# ==================================================
-
-st.subheader("⚠️ Overbudget Monitoring")
-
-overbudget = (
-    df["overbudget"]
-    .value_counts()
+st.bar_chart(
+    top_income.set_index("id")[
+        "yearly_income_rupiah"
+    ]
 )
-
-st.bar_chart(overbudget)
 
 # ==================================================
 # DATA TABLE
 # ==================================================
 
-st.subheader("📋 Dataset Preview")
+st.subheader("📋 Data Pengguna")
 
 st.dataframe(
-    df.head(100),
+    df,
     use_container_width=True
 )
 
@@ -212,8 +234,8 @@ st.dataframe(
 csv = df.to_csv(index=False)
 
 st.download_button(
-    label="⬇️ Download Filtered Data",
-    data=csv,
-    file_name="arthaplan_filtered.csv",
-    mime="text/csv"
+    "⬇️ Download Data",
+    csv,
+    "arthaplan_filtered.csv",
+    "text/csv"
 )
