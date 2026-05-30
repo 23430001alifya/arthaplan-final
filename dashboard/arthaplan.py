@@ -1,404 +1,219 @@
-# =========================================================
-# PREMIUM ARTHAPLAN DASHBOARD
-# MODERN UI - DARK MODE
-# =========================================================
-
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
-# =========================================================
-# PAGE CONFIG
-# =========================================================
+# ==================================================
+# CONFIG
+# ==================================================
 
 st.set_page_config(
     page_title="ArthaPlan Dashboard",
     page_icon="💰",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# =========================================================
-# CUSTOM CSS
-# =========================================================
-
-st.markdown("""
-<style>
-
-.main {
-    background-color: #0f172a;
-}
-
-section[data-testid="stSidebar"] {
-    background-color: #111827;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    color: white;
-}
-
-label, p, div {
-    color: #d1d5db;
-}
-
-.metric-card {
-    background: linear-gradient(
-        135deg,
-        #1e293b,
-        #111827
-    );
-    padding: 20px;
-    border-radius: 20px;
-    border: 1px solid #312e81;
-    box-shadow: 0px 4px 20px rgba(0,0,0,0.3);
-}
-
-.chart-card {
-    background: #111827;
-    padding: 20px;
-    border-radius: 20px;
-    margin-top: 10px;
-    border: 1px solid #1f2937;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# =========================================================
+# ==================================================
 # LOAD DATA
-# =========================================================
+# ==================================================
 
+@st.cache_data
 df = pd.read_csv(
-    'dashboard/clean_arthaplan (1).csv'
+
+    'dashboard/main_data (4).csv'
+
 )
 
-# =========================================================
+# ==================================================
 # SIDEBAR
-# =========================================================
+# ==================================================
+
+st.sidebar.image(
+    "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
+    width=100
+)
 
 st.sidebar.title("💰 ArthaPlan")
 
-st.sidebar.markdown("""
-Financial Planning Dashboard
-""")
+st.sidebar.markdown("---")
 
-# FILTER CATEGORY
-selected_category = st.sidebar.multiselect(
-    "Kategori Pengguna",
-    options=df['user_category'].unique(),
-    default=df['user_category'].unique()
+kategori = st.sidebar.multiselect(
+    "Kategori User",
+    options=df["kategori_user"].dropna().unique(),
+    default=df["kategori_user"].dropna().unique()
+)
+
+credit = st.sidebar.slider(
+    "Minimum Credit Score",
+    int(df["credit_score"].min()),
+    int(df["credit_score"].max()),
+    int(df["credit_score"].min())
 )
 
 df = df[
-    df['user_category'].isin(
-        selected_category
-    )
+    (df["kategori_user"].isin(kategori))
+    &
+    (df["credit_score"] >= credit)
 ]
 
-# FILTER CATEGORY EXPENSE
-selected_expense = st.sidebar.multiselect(
-    "Expense Category",
-    options=df['expense_category'].unique(),
-    default=df['expense_category'].unique()
-)
-
-df = df[
-    df['expense_category'].isin(
-        selected_expense
-    )
-]
-
-# =========================================================
+# ==================================================
 # HEADER
-# =========================================================
+# ==================================================
 
-st.markdown("""
-# 💰 ArthaPlan Financial Dashboard
+st.title("💰 ArthaPlan Interactive Dashboard")
 
-Analisis pengeluaran, budgeting,
-dan fraud detection pengguna.
-""")
+st.markdown(
+"""
+Dashboard Monitoring Financial Planning & User Spending
+"""
+)
 
-# =========================================================
-# KPI SECTION
-# =========================================================
-
-total_spending = df[
-    'amount_rupiah'
-].sum()
-
-avg_transaction = df[
-    'amount_rupiah'
-].mean()
-
-total_users = df[
-    'client_id'
-].nunique()
-
-fraud_count = df[
-    'is_fraud'
-].sum()
+# ==================================================
+# KPI
+# ==================================================
 
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.markdown("""
-    <div class="metric-card">
-        <h5>Total Pengeluaran</h5>
-        <h2>Rp {:,.0f}</h2>
-    </div>
-    """.format(total_spending),
-    unsafe_allow_html=True)
+    st.metric(
+        "👥 Total User",
+        f"{df['client_id'].nunique():,}"
+    )
 
 with col2:
-    st.markdown("""
-    <div class="metric-card">
-        <h5>Rata-rata Transaksi</h5>
-        <h2>Rp {:,.0f}</h2>
-    </div>
-    """.format(avg_transaction),
-    unsafe_allow_html=True)
+    st.metric(
+        "💸 Total Spending",
+        f"Rp {df['amount_rupiah'].sum():,.0f}"
+    )
 
 with col3:
-    st.markdown("""
-    <div class="metric-card">
-        <h5>Total User</h5>
-        <h2>{}</h2>
-    </div>
-    """.format(total_users),
-    unsafe_allow_html=True)
+    st.metric(
+        "💳 Avg Credit Score",
+        f"{df['credit_score'].mean():.0f}"
+    )
 
 with col4:
-    st.markdown("""
-    <div class="metric-card">
-        <h5>Fraud Transaction</h5>
-        <h2>{}</h2>
-    </div>
-    """.format(fraud_count),
-    unsafe_allow_html=True)
-
-# =========================================================
-# CHART ROW 1
-# =========================================================
-
-col5, col6 = st.columns(2)
-
-# =========================================================
-# USER CATEGORY
-# =========================================================
-
-with col5:
-
-    st.markdown("""
-    <div class="chart-card">
-    """, unsafe_allow_html=True)
-
-    st.subheader("📊 Kategori Pengguna")
-
-    category_count = (
-        df['user_category']
-        .value_counts()
-        .reset_index()
+    st.metric(
+        "⚠️ Overbudget User",
+        f"{df['overbudget'].sum():,}"
     )
 
-    category_count.columns = [
-        'Kategori',
-        'Jumlah'
-    ]
+st.divider()
 
-    fig1 = px.pie(
-        category_count,
-        names='Kategori',
-        values='Jumlah',
-        hole=0.6,
-        template='plotly_dark'
+# ==================================================
+# CHART 1
+# ==================================================
+
+col1, col2 = st.columns(2)
+
+with col1:
+
+    st.subheader("📊 Kategori User")
+
+    fig, ax = plt.subplots()
+
+    df["kategori_user"].value_counts().plot(
+        kind="bar",
+        ax=ax
     )
 
-    st.plotly_chart(
-        fig1,
-        use_container_width=True
+    st.pyplot(fig)
+
+with col2:
+
+    st.subheader("💳 Credit Category")
+
+    fig, ax = plt.subplots()
+
+    df["credit_category"].value_counts().plot(
+        kind="pie",
+        autopct="%1.1f%%",
+        ax=ax
     )
 
-    st.markdown("</div>",
-    unsafe_allow_html=True)
+    ax.set_ylabel("")
 
-# =========================================================
-# FRAUD DISTRIBUTION
-# =========================================================
+    st.pyplot(fig)
 
-with col6:
+# ==================================================
+# CHART 2
+# ==================================================
 
-    st.markdown("""
-    <div class="chart-card">
-    """, unsafe_allow_html=True)
+col1, col2 = st.columns(2)
 
-    st.subheader("🚨 Fraud Distribution")
+with col1:
 
-    fraud_dist = (
-        df['is_fraud']
-        .value_counts()
-        .reset_index()
+    st.subheader("📈 Distribusi Credit Score")
+
+    fig, ax = plt.subplots()
+
+    ax.hist(
+        df["credit_score"],
+        bins=20
     )
 
-    fraud_dist.columns = [
-        'Fraud',
-        'Jumlah'
-    ]
+    st.pyplot(fig)
 
-    fig2 = px.bar(
-        fraud_dist,
-        x='Fraud',
-        y='Jumlah',
-        text_auto=True,
-        template='plotly_dark'
+with col2:
+
+    st.subheader("💰 Distribusi Pendapatan")
+
+    fig, ax = plt.subplots()
+
+    ax.hist(
+        df["yearly_income_rupiah"],
+        bins=20
     )
 
-    st.plotly_chart(
-        fig2,
-        use_container_width=True
-    )
+    st.pyplot(fig)
 
-    st.markdown("</div>",
-    unsafe_allow_html=True)
+# ==================================================
+# TOP SPENDING USER
+# ==================================================
 
-# =========================================================
-# CHART ROW 2
-# =========================================================
+st.subheader("🏆 Top 10 Spending User")
 
-col7, col8 = st.columns(2)
-
-# =========================================================
-# EXPENSE CATEGORY
-# =========================================================
-
-with col7:
-
-    st.markdown("""
-    <div class="chart-card">
-    """, unsafe_allow_html=True)
-
-    st.subheader("🛒 Expense Category")
-
-    expense = (
-        df.groupby('expense_category')[
-            'amount_rupiah'
-        ]
-        .sum()
-        .reset_index()
-    )
-
-    fig3 = px.bar(
-        expense,
-        x='expense_category',
-        y='amount_rupiah',
-        text_auto=True,
-        template='plotly_dark'
-    )
-
-    st.plotly_chart(
-        fig3,
-        use_container_width=True
-    )
-
-    st.markdown("</div>",
-    unsafe_allow_html=True)
-
-# =========================================================
-# BUDGET USAGE
-# =========================================================
-
-with col8:
-
-    st.markdown("""
-    <div class="chart-card">
-    """, unsafe_allow_html=True)
-
-    st.subheader("📈 Budget Usage")
-
-    fig4 = px.histogram(
-        df,
-        x='budget_usage',
-        nbins=30,
-        template='plotly_dark'
-    )
-
-    st.plotly_chart(
-        fig4,
-        use_container_width=True
-    )
-
-    st.markdown("</div>",
-    unsafe_allow_html=True)
-
-# =========================================================
-# WARNING TABLE
-# =========================================================
-
-st.markdown("""
-<div class="chart-card">
-""", unsafe_allow_html=True)
-
-st.subheader("⚠️ Budget Warning")
-
-warning = df[
-    df['budget_usage'] >= 90
-]
-
-st.dataframe(
-    warning[
-        [
-            'client_id',
-            'expense_category',
-            'budget_usage',
-            'warning'
-        ]
-    ],
-    use_container_width=True
+top_user = (
+    df.groupby("client_id")["total_spending"]
+    .max()
+    .sort_values(ascending=False)
+    .head(10)
 )
 
-st.markdown("</div>",
-unsafe_allow_html=True)
+st.bar_chart(top_user)
 
-# =========================================================
-# RAW DATA
-# =========================================================
+# ==================================================
+# OVERBUDGET
+# ==================================================
 
-st.markdown("""
-<div class="chart-card">
-""", unsafe_allow_html=True)
+st.subheader("⚠️ Overbudget Monitoring")
 
-st.subheader("🧾 Transaction Data")
+overbudget = (
+    df["overbudget"]
+    .value_counts()
+)
+
+st.bar_chart(overbudget)
+
+# ==================================================
+# DATA TABLE
+# ==================================================
+
+st.subheader("📋 Dataset Preview")
 
 st.dataframe(
     df.head(100),
     use_container_width=True
 )
 
-st.markdown("</div>",
-unsafe_allow_html=True)
-
-# =========================================================
-# DOWNLOAD BUTTON
-# =========================================================
+# ==================================================
+# DOWNLOAD
+# ==================================================
 
 csv = df.to_csv(index=False)
 
 st.download_button(
-    label="⬇️ Download Dataset",
+    label="⬇️ Download Filtered Data",
     data=csv,
-    file_name='arthaplan.csv',
-    mime='text/csv'
+    file_name="arthaplan_filtered.csv",
+    mime="text/csv"
 )
-
-# =========================================================
-# FOOTER
-# =========================================================
-
-st.markdown("---")
-
-st.markdown("""
-<center>
-ArthaPlan Dashboard • Built with Streamlit
-</center>
-""", unsafe_allow_html=True)
