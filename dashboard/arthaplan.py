@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# =========================
-# CONFIG
-# =========================
+# ==================================================
+# CONFIG PAGE
+# ==================================================
 
 st.set_page_config(
     page_title="ArthaPlan Dashboard",
@@ -12,9 +12,43 @@ st.set_page_config(
     layout="wide"
 )
 
-# =========================
+# ==================================================
+# CUSTOM CSS
+# ==================================================
+
+st.markdown("""
+<style>
+
+.main{
+    background-color:#f8faf8;
+}
+
+[data-testid="stSidebar"]{
+    background-color:#14532d;
+}
+
+[data-testid="stSidebar"] *{
+    color:white;
+}
+
+.kpi-card{
+    background:white;
+    padding:20px;
+    border-radius:18px;
+    box-shadow:0px 4px 12px rgba(0,0,0,0.08);
+    border-left:6px solid #22c55e;
+}
+
+h1,h2,h3{
+    color:#14532d;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ==================================================
 # LOAD DATA
-# =========================
+# ==================================================
 
 @st.cache_data
 def load_data():
@@ -22,193 +56,251 @@ def load_data():
 
 df = load_data()
 
-# =========================
-# TITLE
-# =========================
-
-st.title("💰 ArthaPlan Dashboard")
-st.markdown(
-    "Analisis Perilaku Pengeluaran Pengguna"
-)
-
-# =========================
+# ==================================================
 # SIDEBAR
-# =========================
+# ==================================================
 
-st.sidebar.header("Filter")
+st.sidebar.title("💰 ArthaPlan")
 
-kategori = st.sidebar.multiselect(
+st.sidebar.markdown("---")
+
+st.sidebar.subheader("Filter")
+
+kategori_filter = st.sidebar.multiselect(
     "Kategori",
     options=df["kategori"].unique(),
     default=df["kategori"].unique()
 )
 
+card_filter = st.sidebar.multiselect(
+    "Card Type",
+    options=df["card_type"].unique(),
+    default=df["card_type"].unique()
+)
+
+overbudget_filter = st.sidebar.multiselect(
+    "Overbudget",
+    options=df["overbudget"].unique(),
+    default=df["overbudget"].unique()
+)
+
 df = df[
-    df["kategori"].isin(kategori)
+    (df["kategori"].isin(kategori_filter))
+    &
+    (df["card_type"].isin(card_filter))
+    &
+    (df["overbudget"].isin(overbudget_filter))
 ]
 
-# =========================
+# ==================================================
+# HEADER
+# ==================================================
+
+st.title("💰 ArthaPlan Analytics")
+
+st.markdown("""
+Dashboard Analisis Pengeluaran Pengguna, Segmentasi Perilaku Keuangan,
+dan Identifikasi Risiko Overbudget.
+""")
+
+# ==================================================
 # KPI
-# =========================
+# ==================================================
 
 total_user = df["client_id"].nunique()
 
-avg_spending = (
-    df["total_spending"].mean()
+total_spending = df["total_spending"].sum()
+
+avg_spending = df["total_spending"].mean()
+
+overbudget_user = df["overbudget"].sum()
+
+col1,col2,col3,col4 = st.columns(4)
+
+with col1:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <h4>Total User</h4>
+        <h2>{total_user:,}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <h4>Total Spending</h4>
+        <h2>Rp {total_spending:,.0f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <h4>Avg Spending</h4>
+        <h2>Rp {avg_spending:,.0f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <h4>Overbudget User</h4>
+        <h2>{overbudget_user:,}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ==================================================
+# INSIGHT
+# ==================================================
+
+st.success(
+    f"""
+    📌 Insight Utama
+
+    • Total pengguna yang dianalisis: {total_user:,}
+
+    • Total pengeluaran: Rp {total_spending:,.0f}
+
+    • Rata-rata pengeluaran pengguna: Rp {avg_spending:,.0f}
+
+    • Jumlah pengguna overbudget: {overbudget_user:,}
+
+    • Mayoritas pengguna berada pada kategori: {df['kategori'].mode()[0]}
+    """
 )
 
-avg_transaction = (
-    df["transaction_count"].mean()
-)
+# ==================================================
+# ROW 1
+# ==================================================
 
-overbudget_count = (
-    df["overbudget"].sum()
-)
+col1,col2 = st.columns(2)
 
-col1, col2, col3, col4 = st.columns(4)
+with col1:
 
-col1.metric(
-    "Total User",
-    f"{total_user:,}"
-)
+    st.subheader("Distribusi Total Spending")
 
-col2.metric(
-    "Avg Spending",
-    f"Rp {avg_spending:,.0f}"
-)
+    fig1 = px.histogram(
+        df,
+        x="total_spending",
+        nbins=30,
+        color_discrete_sequence=["#16a34a"]
+    )
 
-col3.metric(
-    "Avg Transaction",
-    f"{avg_transaction:,.0f}"
-)
+    st.plotly_chart(
+        fig1,
+        use_container_width=True
+    )
 
-col4.metric(
-    "Overbudget User",
-    f"{overbudget_count:,}"
-)
+with col2:
 
-st.divider()
+    st.subheader("Distribusi Kategori Pengguna")
 
-# =========================
-# DISTRIBUSI SPENDING
-# =========================
+    kategori_count = (
+        df["kategori"]
+        .value_counts()
+        .reset_index()
+    )
 
-st.subheader(
-    "Distribusi Total Spending"
-)
+    kategori_count.columns = [
+        "Kategori",
+        "Jumlah"
+    ]
 
-fig1 = px.histogram(
-    df,
-    x="total_spending",
-    nbins=30
-)
+    fig2 = px.pie(
+        kategori_count,
+        names="Kategori",
+        values="Jumlah",
+        hole=0.5,
+        color_discrete_sequence=[
+            "#14532d",
+            "#16a34a",
+            "#4ade80"
+        ]
+    )
 
-st.plotly_chart(
-    fig1,
-    use_container_width=True
-)
+    st.plotly_chart(
+        fig2,
+        use_container_width=True
+    )
 
-# =========================
-# KATEGORI USER
-# =========================
+# ==================================================
+# ROW 2
+# ==================================================
 
-st.subheader(
-    "Distribusi Kategori Pengguna"
-)
+col1,col2 = st.columns(2)
 
-kategori_count = (
-    df["kategori"]
-    .value_counts()
-    .reset_index()
-)
+with col1:
 
-kategori_count.columns = [
-    "Kategori",
-    "Jumlah"
-]
+    st.subheader("Overbudget Analysis")
 
-fig2 = px.pie(
-    kategori_count,
-    names="Kategori",
-    values="Jumlah",
-    hole=0.4
-)
+    overbudget_count = (
+        df["overbudget"]
+        .value_counts()
+        .reset_index()
+    )
 
-st.plotly_chart(
-    fig2,
-    use_container_width=True
-)
+    overbudget_count.columns = [
+        "Status",
+        "Jumlah"
+    ]
 
-# =========================
-# OVERBUDGET
-# =========================
+    fig3 = px.bar(
+        overbudget_count,
+        x="Status",
+        y="Jumlah",
+        color="Jumlah",
+        color_continuous_scale="greens"
+    )
 
-st.subheader(
-    "Status Overbudget"
-)
+    st.plotly_chart(
+        fig3,
+        use_container_width=True
+    )
 
-overbudget_count = (
-    df["overbudget"]
-    .value_counts()
-    .reset_index()
-)
+with col2:
 
-overbudget_count.columns = [
-    "Status",
-    "Jumlah"
-]
+    st.subheader("Transaction Count vs Spending")
 
-fig3 = px.bar(
-    overbudget_count,
-    x="Status",
-    y="Jumlah"
-)
+    fig4 = px.scatter(
+        df,
+        x="transaction_count",
+        y="total_spending",
+        color="kategori",
+        color_discrete_sequence=[
+            "#14532d",
+            "#16a34a",
+            "#4ade80"
+        ]
+    )
 
-st.plotly_chart(
-    fig3,
-    use_container_width=True
-)
+    st.plotly_chart(
+        fig4,
+        use_container_width=True
+    )
 
-# =========================
-# TOP 10 USER
-# =========================
+# ==================================================
+# TOP USER
+# ==================================================
 
-st.subheader(
-    "Top 10 Pengguna dengan Spending Tertinggi"
-)
+st.subheader("Top 10 Pengguna dengan Spending Tertinggi")
 
 top10 = (
-    df.sort_values(
+    df
+    .sort_values(
         by="total_spending",
         ascending=False
     )
     .head(10)
 )
 
-fig4 = px.bar(
+fig5 = px.bar(
     top10,
     x="client_id",
-    y="total_spending"
-)
-
-st.plotly_chart(
-    fig4,
-    use_container_width=True
-)
-
-# =========================
-# SCATTER
-# =========================
-
-st.subheader(
-    "Transaction Count vs Spending"
-)
-
-fig5 = px.scatter(
-    df,
-    x="transaction_count",
     y="total_spending",
-    color="kategori"
+    color="total_spending",
+    color_continuous_scale="greens"
 )
 
 st.plotly_chart(
@@ -216,9 +308,9 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =========================
+# ==================================================
 # RAW DATA
-# =========================
+# ==================================================
 
 with st.expander("Lihat Dataset"):
 
