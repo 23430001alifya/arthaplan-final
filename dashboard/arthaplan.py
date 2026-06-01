@@ -3,9 +3,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.io as pio
 
-# =====================================
+# ==================================================
 # PAGE CONFIG
-# =====================================
+# ==================================================
 
 st.set_page_config(
     page_title="ArthaPlan Dashboard",
@@ -15,61 +15,71 @@ st.set_page_config(
 
 pio.templates.default = "plotly_white"
 
-# =====================================
+# ==================================================
 # CSS
-# =====================================
+# ==================================================
 
 st.markdown("""
 <style>
 
-.main{
-    background:#f8faf8;
+/* Main */
+.main {
+    background-color: #f8faf8;
 }
 
-[data-testid="stSidebar"]{
-    background:#14532d;
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: #14532d;
 }
 
-[data-testid="stSidebar"] *{
-    color:white;
+[data-testid="stSidebar"] * {
+    color: white !important;
 }
 
-.kpi-card{
-    background:white;
-    padding:20px;
-    border-radius:18px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    border-left:6px solid #22c55e;
+/* Multiselect Tags */
+span[data-baseweb="tag"] {
+    background-color: #16a34a !important;
+    color: white !important;
 }
 
-.kpi-title{
-    color:#6b7280;
-    font-size:14px;
+/* KPI Cards */
+.kpi-card {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    border-left: 6px solid #22c55e;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.08);
 }
 
-.kpi-value{
-    color:#14532d;
-    font-size:28px;
-    font-weight:bold;
+.kpi-title {
+    color: #6b7280;
+    font-size: 14px;
 }
 
-.insight-box{
-    background:#dcfce7;
-    padding:18px;
-    border-radius:12px;
-    border-left:6px solid #16a34a;
+.kpi-value {
+    color: #14532d;
+    font-size: 28px;
+    font-weight: bold;
 }
 
-h1,h2,h3{
-    color:#14532d;
+/* Insight */
+.insight-box {
+    background: #dcfce7;
+    padding: 15px;
+    border-radius: 12px;
+    border-left: 5px solid #16a34a;
+}
+
+h1,h2,h3 {
+    color: #14532d;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================
+# ==================================================
 # LOAD DATA
-# =====================================
+# ==================================================
 
 @st.cache_data
 def load_data():
@@ -77,55 +87,55 @@ def load_data():
 
 df = load_data()
 
-# =====================================
+# ==================================================
 # SIDEBAR
-# =====================================
+# ==================================================
 
 st.sidebar.title("💰 ArthaPlan")
 
 st.sidebar.markdown("---")
 
-st.sidebar.subheader("Filter Dashboard")
+st.sidebar.subheader("Filter Data")
 
-kategori = st.sidebar.multiselect(
+kategori_filter = st.sidebar.multiselect(
     "Kategori",
-    df["kategori"].unique(),
+    options=df["kategori"].unique(),
     default=df["kategori"].unique()
 )
 
-card_type = st.sidebar.multiselect(
+card_filter = st.sidebar.multiselect(
     "Card Type",
-    df["card_type"].unique(),
+    options=df["card_type"].unique(),
     default=df["card_type"].unique()
 )
 
-overbudget = st.sidebar.multiselect(
+overbudget_filter = st.sidebar.multiselect(
     "Overbudget",
-    df["overbudget"].unique(),
+    options=df["overbudget"].unique(),
     default=df["overbudget"].unique()
 )
 
 df = df[
-    (df["kategori"].isin(kategori))
+    (df["kategori"].isin(kategori_filter))
     &
-    (df["card_type"].isin(card_type))
+    (df["card_type"].isin(card_filter))
     &
-    (df["overbudget"].isin(overbudget))
+    (df["overbudget"].isin(overbudget_filter))
 ]
 
-# =====================================
+# ==================================================
 # HEADER
-# =====================================
+# ==================================================
 
-st.title("💰 ArthaPlan Analytics")
+st.title("💰 ArthaPlan Analytics Dashboard")
 
 st.caption(
-    "Smart Financial Planning Dashboard"
+    "Smart Financial Planning for Expenses, Goals, and Insights"
 )
 
-# =====================================
+# ==================================================
 # KPI
-# =====================================
+# ==================================================
 
 total_user = df["client_id"].nunique()
 
@@ -133,23 +143,25 @@ total_spending = df["total_spending"].sum()
 
 avg_spending = df["total_spending"].mean()
 
-overbudget_user = df["overbudget"].sum()
+avg_transaction = df["transaction_count"].mean()
 
-col1,col2,col3,col4 = st.columns(4)
+overbudget_user = int(df["overbudget"].sum())
+
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown(f"""
-    <div class='kpi-card'>
-        <div class='kpi-title'>TOTAL USER</div>
-        <div class='kpi-value'>{total_user:,}</div>
+    <div class="kpi-card">
+        <div class="kpi-title">TOTAL USER</div>
+        <div class="kpi-value">{total_user:,}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
     st.markdown(f"""
-    <div class='kpi-card'>
-        <div class='kpi-title'>TOTAL SPENDING</div>
-        <div class='kpi-value'>
+    <div class="kpi-card">
+        <div class="kpi-title">TOTAL SPENDING</div>
+        <div class="kpi-value">
         Rp {total_spending:,.0f}
         </div>
     </div>
@@ -157,19 +169,19 @@ with col2:
 
 with col3:
     st.markdown(f"""
-    <div class='kpi-card'>
-        <div class='kpi-title'>AVG SPENDING</div>
-        <div class='kpi-value'>
-        Rp {avg_spending:,.0f}
+    <div class="kpi-card">
+        <div class="kpi-title">AVG TRANSACTION</div>
+        <div class="kpi-value">
+        {avg_transaction:,.0f}
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 with col4:
     st.markdown(f"""
-    <div class='kpi-card'>
-        <div class='kpi-title'>OVERBUDGET USER</div>
-        <div class='kpi-value'>
+    <div class="kpi-card">
+        <div class="kpi-title">OVERBUDGET USER</div>
+        <div class="kpi-value">
         {overbudget_user:,}
         </div>
     </div>
@@ -177,32 +189,22 @@ with col4:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# =====================================
-# INSIGHT
-# =====================================
+# ==================================================
+# INSIGHT BOX
+# ==================================================
 
 st.markdown(f"""
 <div class="insight-box">
 
-<b>📌 Insight Utama</b>
+<b>📌 Insight Utama</b><br><br>
 
-<br><br>
+• Total pengguna yang dianalisis: {total_user:,}<br>
 
-• Total pengguna: {total_user:,}
+• Total pengeluaran: Rp {total_spending:,.0f}<br>
 
-<br>
+• Rata-rata transaksi: {avg_transaction:,.0f}<br>
 
-• Total spending: Rp {total_spending:,.0f}
-
-<br>
-
-• Average spending: Rp {avg_spending:,.0f}
-
-<br>
-
-• User overbudget: {overbudget_user:,}
-
-<br>
+• Pengguna overbudget: {overbudget_user:,}<br>
 
 • Mayoritas kategori:
 <b>{df['kategori'].mode()[0]}</b>
@@ -212,11 +214,11 @@ st.markdown(f"""
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# =====================================
+# ==================================================
 # ROW 1
-# =====================================
+# ==================================================
 
-col1,col2 = st.columns(2)
+col1, col2 = st.columns(2)
 
 with col1:
 
@@ -229,9 +231,7 @@ with col1:
         color_discrete_sequence=["#16a34a"]
     )
 
-    fig1.update_layout(
-        height=400
-    )
+    fig1.update_layout(height=400)
 
     st.plotly_chart(
         fig1,
@@ -240,7 +240,7 @@ with col1:
 
 with col2:
 
-    st.subheader("Kategori Pengguna")
+    st.subheader("Segmentasi Pengguna")
 
     kategori_count = (
         df["kategori"]
@@ -265,22 +265,20 @@ with col2:
         ]
     )
 
-    fig2.update_layout(
-        height=400
-    )
+    fig2.update_layout(height=400)
 
     st.plotly_chart(
         fig2,
         use_container_width=True
     )
 
-# =====================================
+# ==================================================
 # ROW 2
-# =====================================
+# ==================================================
 
-col1,col2 = st.columns(2)
+col3, col4 = st.columns(2)
 
-with col1:
+with col3:
 
     st.subheader("Overbudget Analysis")
 
@@ -316,9 +314,9 @@ with col1:
         use_container_width=True
     )
 
-with col2:
+with col4:
 
-    st.subheader("Transaction vs Spending")
+    st.subheader("Transaction Count vs Spending")
 
     fig4 = px.scatter(
         df,
@@ -332,22 +330,18 @@ with col2:
         ]
     )
 
-    fig4.update_layout(
-        height=400
-    )
+    fig4.update_layout(height=400)
 
     st.plotly_chart(
         fig4,
         use_container_width=True
     )
 
-# =====================================
+# ==================================================
 # TOP 10 USER
-# =====================================
+# ==================================================
 
-st.subheader(
-    "Top 10 Pengguna dengan Spending Tertinggi"
-)
+st.subheader("Top 10 Pengguna dengan Spending Tertinggi")
 
 top10 = (
     df
@@ -365,22 +359,20 @@ fig5 = px.bar(
     color_discrete_sequence=["#16a34a"]
 )
 
-fig5.update_layout(
-    height=500
-)
+fig5.update_layout(height=500)
 
 st.plotly_chart(
     fig5,
     use_container_width=True
 )
 
-# =====================================
-# RAW DATA
-# =====================================
+# ==================================================
+# DATA TABLE
+# ==================================================
 
-with st.expander("📄 Lihat Dataset"):
+st.subheader("Dataset")
 
-    st.dataframe(
-        df,
-        use_container_width=True
-    )
+st.dataframe(
+    df,
+    use_container_width=True
+)
