@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 
-# ==================================================
+# =========================
 # CONFIG
-# ==================================================
+# =========================
 
 st.set_page_config(
     page_title="ArthaPlan Dashboard",
@@ -12,230 +12,217 @@ st.set_page_config(
     layout="wide"
 )
 
-# ==================================================
+# =========================
 # LOAD DATA
-# ==================================================
+# =========================
 
 @st.cache_data
 def load_data():
-    return pd.read_csv("dashboard/main_data (4).csv")
+    return pd.read_csv("dashboard/main_data_final.csv")
 
 df = load_data()
 
-# ==================================================
-# SIDEBAR
-# ==================================================
+# =========================
+# TITLE
+# =========================
 
-st.sidebar.title("💰 ArthaPlan")
+st.title("💰 ArthaPlan Dashboard")
+st.markdown(
+    "Analisis Perilaku Pengeluaran Pengguna"
+)
+
+# =========================
+# SIDEBAR
+# =========================
+
+st.sidebar.header("Filter")
 
 kategori = st.sidebar.multiselect(
-    "Kategori User",
-    options=df["kategori_user"].unique(),
-    default=df["kategori_user"].unique()
-)
-
-credit_min = st.sidebar.slider(
-    "Minimum Credit Score",
-    int(df["credit_score"].min()),
-    int(df["credit_score"].max()),
-    int(df["credit_score"].min())
-)
-
-gender = st.sidebar.multiselect(
-    "Gender",
-    options=df["gender"].unique(),
-    default=df["gender"].unique()
+    "Kategori",
+    options=df["kategori"].unique(),
+    default=df["kategori"].unique()
 )
 
 df = df[
-    (df["kategori_user"].isin(kategori))
-    &
-    (df["credit_score"] >= credit_min)
-    &
-    (df["gender"].isin(gender))
+    df["kategori"].isin(kategori)
 ]
 
-# ==================================================
-# HEADER
-# ==================================================
+# =========================
+# KPI
+# =========================
 
-st.title("💰 ArthaPlan Dashboard")
-st.markdown("### Financial Planning & User Profiling")
+total_user = df["client_id"].nunique()
 
-# ==================================================
-# KPI CARDS
-# ==================================================
+avg_spending = (
+    df["total_spending"].mean()
+)
+
+avg_transaction = (
+    df["transaction_count"].mean()
+)
+
+overbudget_count = (
+    df["overbudget"].sum()
+)
 
 col1, col2, col3, col4 = st.columns(4)
 
-with col1:
-    st.metric(
-        "👥 Total User",
-        f"{df['id'].nunique():,}"
-    )
+col1.metric(
+    "Total User",
+    f"{total_user:,}"
+)
 
-with col2:
-    st.metric(
-        "💵 Avg Income",
-        f"Rp {df['yearly_income_rupiah'].mean():,.0f}"
-    )
+col2.metric(
+    "Avg Spending",
+    f"Rp {avg_spending:,.0f}"
+)
 
-with col3:
-    st.metric(
-        "💳 Avg Credit Score",
-        f"{df['credit_score'].mean():.0f}"
-    )
+col3.metric(
+    "Avg Transaction",
+    f"{avg_transaction:,.0f}"
+)
 
-with col4:
-    st.metric(
-        "🏦 Avg Debt",
-        f"Rp {df['total_debt_rupiah'].mean():,.0f}"
-    )
+col4.metric(
+    "Overbudget User",
+    f"{overbudget_count:,}"
+)
 
 st.divider()
 
-# ==================================================
-# CHARTS BARIS 1
-# ==================================================
+# =========================
+# DISTRIBUSI SPENDING
+# =========================
 
-col1, col2 = st.columns(2)
+st.subheader(
+    "Distribusi Total Spending"
+)
 
-with col1:
+fig1 = px.histogram(
+    df,
+    x="total_spending",
+    nbins=30
+)
 
-    st.subheader("📊 Kategori User")
+st.plotly_chart(
+    fig1,
+    use_container_width=True
+)
 
-    fig, ax = plt.subplots()
+# =========================
+# KATEGORI USER
+# =========================
 
-    df["kategori_user"].value_counts().plot(
-        kind="bar",
-        ax=ax
-    )
+st.subheader(
+    "Distribusi Kategori Pengguna"
+)
 
-    st.pyplot(fig)
+kategori_count = (
+    df["kategori"]
+    .value_counts()
+    .reset_index()
+)
 
-with col2:
+kategori_count.columns = [
+    "Kategori",
+    "Jumlah"
+]
 
-    st.subheader("💳 Credit Category")
+fig2 = px.pie(
+    kategori_count,
+    names="Kategori",
+    values="Jumlah",
+    hole=0.4
+)
 
-    fig, ax = plt.subplots()
+st.plotly_chart(
+    fig2,
+    use_container_width=True
+)
 
-    df["credit_category"].value_counts().plot(
-        kind="pie",
-        autopct="%1.1f%%",
-        ax=ax
-    )
+# =========================
+# OVERBUDGET
+# =========================
 
-    ax.set_ylabel("")
+st.subheader(
+    "Status Overbudget"
+)
 
-    st.pyplot(fig)
+overbudget_count = (
+    df["overbudget"]
+    .value_counts()
+    .reset_index()
+)
 
-# ==================================================
-# CHARTS BARIS 2
-# ==================================================
+overbudget_count.columns = [
+    "Status",
+    "Jumlah"
+]
 
-col1, col2 = st.columns(2)
+fig3 = px.bar(
+    overbudget_count,
+    x="Status",
+    y="Jumlah"
+)
 
-with col1:
+st.plotly_chart(
+    fig3,
+    use_container_width=True
+)
 
-    st.subheader("💰 Distribusi Pendapatan")
+# =========================
+# TOP 10 USER
+# =========================
 
-    fig, ax = plt.subplots()
+st.subheader(
+    "Top 10 Pengguna dengan Spending Tertinggi"
+)
 
-    ax.hist(
-        df["yearly_income_rupiah"],
-        bins=20
-    )
-
-    st.pyplot(fig)
-
-with col2:
-
-    st.subheader("🏦 Distribusi Hutang")
-
-    fig, ax = plt.subplots()
-
-    ax.hist(
-        df["total_debt_rupiah"],
-        bins=20
-    )
-
-    st.pyplot(fig)
-
-# ==================================================
-# CHARTS BARIS 3
-# ==================================================
-
-col1, col2 = st.columns(2)
-
-with col1:
-
-    st.subheader("📈 Distribusi Credit Score")
-
-    fig, ax = plt.subplots()
-
-    ax.hist(
-        df["credit_score"],
-        bins=20
-    )
-
-    st.pyplot(fig)
-
-with col2:
-
-    st.subheader("👨‍💼 Gender")
-
-    fig, ax = plt.subplots()
-
-    df["gender"].value_counts().plot(
-        kind="pie",
-        autopct="%1.1f%%",
-        ax=ax
-    )
-
-    ax.set_ylabel("")
-
-    st.pyplot(fig)
-
-# ==================================================
-# TOP USER INCOME
-# ==================================================
-
-st.subheader("🏆 Top 10 Pendapatan Tertinggi")
-
-top_income = (
+top10 = (
     df.sort_values(
-        "yearly_income_rupiah",
+        by="total_spending",
         ascending=False
     )
     .head(10)
 )
 
-st.bar_chart(
-    top_income.set_index("id")[
-        "yearly_income_rupiah"
-    ]
+fig4 = px.bar(
+    top10,
+    x="client_id",
+    y="total_spending"
 )
 
-# ==================================================
-# DATA TABLE
-# ==================================================
-
-st.subheader("📋 Data Pengguna")
-
-st.dataframe(
-    df,
+st.plotly_chart(
+    fig4,
     use_container_width=True
 )
 
-# ==================================================
-# DOWNLOAD
-# ==================================================
+# =========================
+# SCATTER
+# =========================
 
-csv = df.to_csv(index=False)
-
-st.download_button(
-    "⬇️ Download Data",
-    csv,
-    "arthaplan_filtered.csv",
-    "text/csv"
+st.subheader(
+    "Transaction Count vs Spending"
 )
+
+fig5 = px.scatter(
+    df,
+    x="transaction_count",
+    y="total_spending",
+    color="kategori"
+)
+
+st.plotly_chart(
+    fig5,
+    use_container_width=True
+)
+
+# =========================
+# RAW DATA
+# =========================
+
+with st.expander("Lihat Dataset"):
+
+    st.dataframe(
+        df,
+        use_container_width=True
+    )
