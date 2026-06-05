@@ -83,7 +83,7 @@ h1,h2,h3 {
 
 @st.cache_data
 def load_data():
-    return pd.read_csv("dashboard/main_data_final.csv")
+    return pd.read_csv("dashboard/main_data_arthaplan.csv")
 
 df = load_data()
 
